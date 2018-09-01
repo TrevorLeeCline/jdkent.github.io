@@ -45,6 +45,7 @@ gplus_username:  lorem_ipsum
 **Don't forget to change your url before you deploy your site!**
 
 ## Color and Particle Customization
+
 - Color Customization
   - Edit the sass variables
 - Particle Customization
