@@ -400,34 +400,37 @@ repository.
 You will place this code in your `README.md` file located at the
 base of your repository.
 
+PLEASE IGNORE ALL THE BACKSLASHES!
+
 ```liquid
-{% assign my_files = site.static_files | where:"extname",".svg" | sort:"modified_time" | reverse %}
+\{\% assign my_files = site.static_files | where:"extname",".svg" | sort:"modified_time" | reverse \%\}
 
-{% capture sevendays %}{{'now' | date: "%s" | minus : 604800 }}{% endcapture %}
+\{\% capture sevendays \%\}\{\{'now' | date: "%s" | minus : 604800 \}\}\{\% endcapture \%\}
 
-{% for taskswitch in my_files %}
-    {% if taskswitch.name contains "swarmplot" %}
-        {% capture file_mod %}{{taskswitch.modified_time | date: "%s"}}{% endcapture %}
-        {% if file_mod > sevendays %}
+\{\% for taskswitch in my_files \%\}
+    \{\% if taskswitch.name contains "swarmplot" \%\}
+        \{\% capture file_mod \%\}\{\{taskswitch.modified_time | date: "\%s"\}\}\{\% endcapture \%\}
+        \{\% if file_mod > sevendays \%\}
 
 ### Recent
 
-        {% else %}
+        \{\% else \%\}
 
 ### Older
 
-        {% endif %}
-**{{taskswitch.name}}**
-![{{taskswitch.name}}]({{ taskswitch.path | prepend:site.baseurl }})
-    {% endif %}
-{% endfor %}
+        \{\% endif \%\}
+**\{\{taskswitch.name\}\}**
+![\{\{taskswitch.name\}\}](\{\{ taskswitch.path | prepend:site.baseurl \}\})
+    \{\% endif \%\}
+\{\% endfor \%\}
 ```
+
 **Note**: [This stackoverflow](https://stackoverflow.com/questions/7087376/comparing-dates-in-liquid)
 helped me with how to parse and compare dates
 
 I will explain important bits of this code:
 
-`{% assign my_files = site.static_files | where:"extname",".svg" | sort:"modified_time" | reverse %}`
+`\{\% assign my_files = site.static_files | where:"extname",".svg" | sort:"modified_time" | reverse \%\}`
 
 This line creates a [variable](https://help.shopify.com/en/themes/liquid/tags/variable-tags)
 called my_files that searches through all [static files](https://jekyllrb.com/docs/static-files/)
@@ -437,21 +440,21 @@ by the date the file was last modified (from oldest -> newest).
 Finally, the result is reversed so that the array is sorted from
 newest -> oldest.
 
-`{% capture sevendays %}{{'now' | date: "%s" | minus : 604800 }}{% endcapture %}`
+`\{\% capture sevendays \%\}\{\{'now' | date: "%s" | minus : 604800 \}\}\{\% endcapture \%\}`
 
 This line creates a variable called sevendays which measures the current
 time using seconds `%s` and then subtracts seven days worth of
 seconds (`7 * 24 * 60 * 60 = 604800`).
 This will be used to tell whether an image is seven days old or not.
 
-`{% capture file_mod %}{{taskswitch.modified_time | date: "%s"}}{% endcapture %}`
+`\{\% capture file_mod \%\}\{\{taskswitch.modified_time | date: "%s"\}\}\{\% endcapture \%\}`
 
 This line creates the variable file_mod.
 file_mod is the date (in seconds) when the file was last modified.
 This means we can directly compare file_mod and sevendays to test whether
 the file is older or newer than seven days.
 
-`![{{taskswitch.name}}]({{ taskswitch.path | prepend:site.baseurl }})`
+`![\{\{taskswitch.name\}\}](\{\{ taskswitch.path | prepend:site.baseurl \}\})`
 
 This is the last line I will explain since it may look confusing.
 It combines both markdown syntax and liquid syntax.
