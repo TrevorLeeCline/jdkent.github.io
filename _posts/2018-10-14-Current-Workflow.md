@@ -1,5 +1,8 @@
 ---
+layout: post
+author: James Kent
 ---
+
 # My Workflow
 
 We work with data on a lab server, basically network attached storage...

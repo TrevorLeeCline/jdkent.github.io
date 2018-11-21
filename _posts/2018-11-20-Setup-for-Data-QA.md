@@ -1,4 +1,6 @@
 ---
+layout: post
+author: James Kent
 ---
 
 # Automating Data Quality Assurance
