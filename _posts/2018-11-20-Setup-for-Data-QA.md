@@ -321,3 +321,115 @@ jobs:
             git commit -m "[skip ci] $(date)"
             git push -q https://${GITHUB_TOKEN}@github.com/HBClab/BetterTaskSwitch.git master
 ```
+
+- `version: 2`: the overall version of circleci to use, they are depreciating version one so all of them should be version 2
+- `jobs:` the list of things I want circleci to run.
+  - `build:`: this provides the option to choose what machinary I want circleci to run on
+    - `docker:`: I want to use docker to select the environment my jobs are run using.
+      - `- image:jdkent/eprime_convert:latest`: this selects the docker image stored on dockerhub that we just made in the last step.
+    - `working_directory: ~/repo`: where the commandline interface will drop me when I'm running commands in the docker container we selected (I don't really take advantage of this option).
+    - `steps:`: the steps we will take to run the job.
+      - `- run:`: instantiation of a step to take in the job
+        - `name: clone github repo`: the name of the step we are taking.
+        - `command: |`: the actual command we will be running in the docker container (the `|` (pipe) allows us to type the command on a separate line so the line of code does not look crowded).
+      - `- run`
+        - `name: check if data QA should be skipped`
+        - `command: |`: this command checks if `[skip ci]` or `[skip_ci]` is in the most recent commit message and will stop the circleci build if this is selected.
+      - `- run:`
+        - `name: run eprime convert`
+        - `command: |`: this command activates the conda environment and runs our data qa script with the appropriate inputs generating the figure output.
+      - `- run:`
+        - `name: add and commit files`
+        - `command: |`: this command creates a github identity so the bot can push the new data to the github repository (importantly the github message contains `[skip ci]`, what would happen if that wasn't there?)
+
+One important detail I've left out is what's up with `${GITHUB_TOKEN}`.
+That is a special variable I've defined using circleci's environment variable settings.
+This is great for storing variables that represent some type of authentication (e.g. passwords), but you don't want everyone to be able to see the password.
+In this instance I'm using a github token.
+You can make your own github token going to your github profile, clicking on settings, clicking on developer settings, and then creating a new token.
+**Warning**: you will only have explicit access to your token when you create it, so make sure you copy the token somewhere safe on your computer.
+
+Once you have circleci setup and the config file inside your repository, you are ready to add the files and push the changes back up to github, and observe your first circleci build.
+The steps would look something like this:
+
+```bash
+git add .circleci/config.yml
+git commit -m 'add circleci build configuration'
+git push origin masterj
+```
+
+**Note**: the error I ran into when doing this was incorrect permissions of `eprime_convert.py` in my repository.
+I gave the file executable permissions with the following command:
+
+```bash
+git update-index --chmod=+x eprime_convert.py
+```
+
+## Step 3: display the figures using github-pages
+
+We have created a reproducible environment and setup circleci to run everytime
+we push a new commit to the repository.
+The next step is to easily visualize all the figures we have created.
+We will do this using github-pages.
+
+Follow the github instructions to have github start hosting your repository as a static webpage (using github-pages).
+I'm using the minimal theme and I suggest that you use that theme too.
+Pull the changes to your repository.
+You will have an `_config.yml` file in your base directory.
+Change the file to look something like this:
+
+```yml
+theme: jekyll-theme-minimal
+plugins:
+  - jekyll-relative-links
+title: [BetterTaskSwitch]
+description: [Monitoring BetterTaskSwitch Data]
+logo: https://avatars0.githubusercontent.com/u/24659915?s=400&u=12a4f626488fe0f692d77f355d9dd9f3e4e63f7a&v=4
+baseurl: /BetterTaskSwitch
+```
+
+You will change the title, description, and baseurl to what's specific in
+the repository you are working on.
+The logo is pointing towards our (HBClab) github logo.
+
+Next we will add `liquid` syntax to display all the swarmplots that are in our
+repository.
+You will place this code in your `README.md` file located at the
+base of your repository.
+
+```liquid
+{% for taskswitch in site.static_files %}
+    {% if taskswitch.extname == ".svg" and taskswitch.name contains "swarmplot" %}
+**{{taskswitch.name}}**
+![{{taskswitch.name}}]({{ taskswitch.path | prepend:site.baseurl }})
+    {% endif %}
+{% endfor %}
+```
+
+In this code I iterate over all static files in the repository
+(which turn out to be any files jekyll does not recognize as
+part of the structure of the website).
+The `svg` files are included as a part of the static files.
+So I select the specific `svg` files by filtering by the static file's
+extension (`.extname`) and whether it contains `swarmplot` in the file name.
+If the static file meets those criteria, I create a bolded title
+`**{{taskswitch.name}}**`, and place an inline image referencing the path
+to the selected static file,
+`![{{taskswitch.name}}]({{ taskswitch.path | prepend:site.baseurl }})`.
+
+Next we want to check to make sure we did everything correctly.
+We can do this by serving the jekyll website we made locally.
+Please follow the github instructions to do this.
+
+Once we are satisfied with how the website looks, we can add/commit/push
+the changes to github.
+
+```bash
+git add _config.yml Gemfile README.md
+git commit -m 'add website functionality'
+git push origin master
+```
+
+That's it!
+Once you've done all that, you can reap the benefits of having an automated
+system that generates figures and makes them visible via a website.
