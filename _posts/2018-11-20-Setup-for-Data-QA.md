@@ -345,10 +345,11 @@ jobs:
         - `command: |`: this command creates a github identity so the bot can push the new data to the github repository (importantly the github message contains `[skip ci]`, what would happen if that wasn't there?)
 
 One important detail I've left out is what's up with `${GITHUB_TOKEN}`.
-That is a special variable I've defined using circleci's environment variable settings.
+That is a special variable I've defined using circleci's [environment variable settings](https://circleci.com/docs/2.0/env-vars/#setting-an-environment-variable-in-a-project).
 This is great for storing variables that represent some type of authentication (e.g. passwords), but you don't want everyone to be able to see the password.
 In this instance I'm using a github token.
 You can make your own github token going to your github profile, clicking on settings, clicking on developer settings, and then creating a new token.
+[see the github announcement about tokens](https://blog.github.com/2013-05-16-personal-api-tokens/)
 **Warning**: you will only have explicit access to your token when you create it, so make sure you copy the token somewhere safe on your computer.
 
 Once you have circleci setup and the config file inside your repository, you are ready to add the files and push the changes back up to github, and observe your first circleci build.
@@ -400,28 +401,79 @@ You will place this code in your `README.md` file located at the
 base of your repository.
 
 ```liquid
-{% for taskswitch in site.static_files %}
-    {% if taskswitch.extname == ".svg" and taskswitch.name contains "swarmplot" %}
+{% assign my_files = site.static_files | where:"extname",".svg" | sort:"modified_time" | reverse %}
+
+{% capture sevendays %}{{'now' | date: "%s" | minus : 604800 }}{% endcapture %}
+
+{% for taskswitch in my_files %}
+    {% if taskswitch.name contains "swarmplot" %}
+        {% capture file_mod %}{{taskswitch.modified_time | date: "%s"}}{% endcapture %}
+        {% if file_mod > sevendays %}
+
+### Recent
+
+        {% else %}
+
+### Older
+
+        {% endif %}
 **{{taskswitch.name}}**
 ![{{taskswitch.name}}]({{ taskswitch.path | prepend:site.baseurl }})
     {% endif %}
 {% endfor %}
 ```
+**Note**: [This stackoverflow](https://stackoverflow.com/questions/7087376/comparing-dates-in-liquid)
+helped me with how to parse and compare dates
 
-In this code I iterate over all static files in the repository
-(which turn out to be any files jekyll does not recognize as
-part of the structure of the website).
-The `svg` files are included as a part of the static files.
-So I select the specific `svg` files by filtering by the static file's
-extension (`.extname`) and whether it contains `swarmplot` in the file name.
-If the static file meets those criteria, I create a bolded title
-`**{{taskswitch.name}}**`, and place an inline image referencing the path
-to the selected static file,
-`![{{taskswitch.name}}]({{ taskswitch.path | prepend:site.baseurl }})`.
+I will explain important bits of this code:
+
+`{% assign my_files = site.static_files | where:"extname",".svg" | sort:"modified_time" | reverse %}`
+
+This line creates a [variable](https://help.shopify.com/en/themes/liquid/tags/variable-tags)
+called my_files that searches through all [static files](https://jekyllrb.com/docs/static-files/)
+where the extension of the file is `.svg`.
+Next, the resulting array is then piped to [sort the array](https://www.siteleaf.com/blog/advanced-liquid-sort/)
+by the date the file was last modified (from oldest -> newest).
+Finally, the result is reversed so that the array is sorted from
+newest -> oldest.
+
+`{% capture sevendays %}{{'now' | date: "%s" | minus : 604800 }}{% endcapture %}`
+
+This line creates a variable called sevendays which measures the current
+time using seconds `%s` and then subtracts seven days worth of
+seconds (`7 * 24 * 60 * 60 = 604800`).
+This will be used to tell whether an image is seven days old or not.
+
+`{% capture file_mod %}{{taskswitch.modified_time | date: "%s"}}{% endcapture %}`
+
+This line creates the variable file_mod.
+file_mod is the date (in seconds) when the file was last modified.
+This means we can directly compare file_mod and sevendays to test whether
+the file is older or newer than seven days.
+
+`![{{taskswitch.name}}]({{ taskswitch.path | prepend:site.baseurl }})`
+
+This is the last line I will explain since it may look confusing.
+It combines both markdown syntax and liquid syntax.
+Here is the markdown portion: `![name](url)`.
+That markdown syntax displays an inline image.
+The double curly brackets are liquid syntax.
+These return strings that can be interpreted by markdown.
+`taskswitch.path` is the path to the file relative to the top
+directory of the repository (e.g. `/some/dir/file.svg`).
+However, with how github parses the `url`, we also need to
+include the website basename as well, so we prepend the site's
+baseurl.
+If you look back, you can see we defined the baseurl variable in
+`_config.yml`.
+This is the difference between searching for a file using this
+`https://hbclab.github.io` as our baseurl and this
+`https://hbclab.github.io/BetterTaskSwitch` (we want this one)
+
 
 Next we want to check to make sure we did everything correctly.
 We can do this by serving the jekyll website we made locally.
-Please follow the github instructions to do this.
+Please follow the [github instructions](https://help.github.com/articles/setting-up-your-github-pages-site-locally-with-jekyll/) to do this.
 
 Once we are satisfied with how the website looks, we can add/commit/push
 the changes to github.
